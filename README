@@ -1,0 +1,21 @@
+Process Pool is something I created to replace a thread pool that had major performance problems caused by Ruby's (MRI)
+poor thread implementation.
+
+The basic usage is:
+
+class SomeTask
+  def initialize(x, y, z)
+  end
+
+  def run
+  end
+end
+
+pool = ProcessPool.new(5) # first constructor argument is a number of worker processes
+pool.schedule SomeTask, 1, 2, 3 # adds task SomeTask.new(1,2,3) to the queue (instantiation happens just before calling run())
+pool.start # starts the workers
+pool.schedule SomeTask, 3, 2, 1 # tasks can be added also after calling start
+pool.shutdown # waits for all the tasks in the queue to be processed and kills all the worker processes
+
+For now there is only one, very naive, queue implementation, which uses file locking and JSON storage format. I plan on adding
+some other (better) queue backend soon.
