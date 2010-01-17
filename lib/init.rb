@@ -1,5 +1,6 @@
+require 'rubygems'
 require 'json'
 
-%w{process_pool simple_queue}.each do |file|
-  require File.expand_path(File.join(File.dirname(__FILE__), file))  
-end
+require File.expand_path(File.join(File.dirname(__FILE__), 'simple_logger'))
+require File.expand_path(File.join(File.dirname(__FILE__), 'simple_queue'))
+require File.expand_path(File.join(File.dirname(__FILE__), 'process_pool'))
