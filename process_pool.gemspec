@@ -5,13 +5,13 @@
 
 Gem::Specification.new do |s|
   s.name = %q{process_pool}
-  s.version = "0.1.0"
+  s.version = "0.1.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Adam Pohorecki"]
-  s.date = %q{2010-01-17}
+  s.date = %q{2010-01-18}
   s.email = %q{adam@pohorecki.pl}
-  s.executables = ["convert_to_should_syntax", "rake", "rubyforge", "flog", "ruby_parse", "flay", "rcov", "edit_json.rb", "sow", "prettify_json.rb"]
+  s.executables = ["edit_json.rb", "rake", "prettify_json.rb", "convert_to_should_syntax"]
   s.extra_rdoc_files = [
     "LICENSE",
      "README"
@@ -27,6 +27,7 @@ Gem::Specification.new do |s|
      "lib/process_pool.rb",
      "lib/simple_logger.rb",
      "lib/simple_queue.rb",
+     "process_pool.gemspec",
      "test/process_pool_test.rb",
      "test/simple_queue_test.rb",
      "test/test_helper.rb"
@@ -37,9 +38,9 @@ Gem::Specification.new do |s|
   s.rubygems_version = %q{1.3.5}
   s.summary = %q{ProcessPool with interchangeable job queue backends for Ruby}
   s.test_files = [
-    "test/test_helper.rb",
+    "test/process_pool_test.rb",
      "test/simple_queue_test.rb",
-     "test/process_pool_test.rb"
+     "test/test_helper.rb"
   ]
 
   if s.respond_to? :specification_version then
