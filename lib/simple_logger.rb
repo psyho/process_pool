@@ -1,3 +1,5 @@
+require File.join(File.expand_path(File.dirname(__FILE__)), 'init')
+
 class SimpleLogger
   LEVELS = [:debug, :info, :warn, :error, :fatal]
 

@@ -1,3 +1,5 @@
+require File.join(File.expand_path(File.dirname(__FILE__)), 'init')
+
 class ProcessPool
 
   class InvalidStateError < StandardError;
@@ -53,6 +55,8 @@ class ProcessPool
     worker_pids.each do |pid|
       Process.wait(pid)
     end
+
+    queue.close
   end
 
   def is_running?

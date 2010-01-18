@@ -8,6 +8,9 @@ class SampleQueue
     self.data = []
   end
 
+  def close    
+  end
+
   def uri
     'test-queue'
   end
@@ -175,12 +178,23 @@ class ProcessPoolTest < Test::Unit::TestCase
       Process.expects(:wait).with(1).times(3).returns(0)
       @pool.shutdown
     end
+
+    should "close the queue" do
+      @queue.expects(:close)
+      Process.stubs(:wait => 0)
+      @pool.shutdown
+    end
   end
 
   context "with default queue and two workers" do
     setup do
       @pool = ProcessPool.new(1)
       2.times { |n| @pool.schedule(SampleTask, n) }
+      @pool.send(:queue).stubs(:close => nil) # so that we can inspect the queue contents 
+    end
+
+    teardown do
+      SimpleQueue.get(@pool.send(:queue).uri).close
     end
 
     should "empty the queue before returning from shutdown" do
@@ -213,6 +227,7 @@ class ProcessPoolTest < Test::Unit::TestCase
       @pool.shutdown
       assert_equal 0, @pool.send(:queue).size
     end
+
   end
 
 end

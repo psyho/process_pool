@@ -1,3 +1,5 @@
+require File.join(File.expand_path(File.dirname(__FILE__)), 'init')
+
 require 'rubygems'
 require 'json'
 require 'tempfile'
