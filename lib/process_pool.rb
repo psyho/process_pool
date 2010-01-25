@@ -21,6 +21,9 @@ class ProcessPool
     push_task(job_class, args)
   end
 
+  def register_extension(extension)    
+  end
+
   def start
     raise InvalidStateError.new('Can not start a pool more than once') unless is_stopped?
     logger.info("Starting process pool")

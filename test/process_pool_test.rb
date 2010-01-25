@@ -65,6 +65,21 @@ class WrongArgumentsTask
   end
 end
 
+class WriteToFileTask
+
+  def initialize(path, n)
+    @path = path
+    @n = n
+  end
+
+  def run
+    File.open(@path) do |file|
+      file.puts "task #{n}"
+    end
+  end
+
+end
+
 class ProcessPoolTest < Test::Unit::TestCase
 
   context "state" do
@@ -99,6 +114,21 @@ class ProcessPoolTest < Test::Unit::TestCase
       should "raise InvalidStateError when calling shutdown on a not started pool" do
         assert_raises ProcessPool::InvalidStateError do
           @pool.shutdown
+        end
+      end
+
+      should "raise InvalidStateError when calling register_extension on a started pool" do
+        @pool.start
+        assert_raises ProcessPool::InvalidStateError do
+          @pool.register_extension(BaseWorkerExtension.new)
+        end
+      end
+
+      should "raise InvalidStateError when calling register_extension on a shutdown pool" do
+        @pool.start
+        @pool.shutdown
+        assert_raises ProcessPool::InvalidStateError do
+          @pool.register_extension(BaseWorkerExtension.new)
         end
       end
 
@@ -158,7 +188,7 @@ class ProcessPoolTest < Test::Unit::TestCase
   context :shutdown do
     setup do
       @queue = SampleQueue.new
-      @pool = ProcessPool.new(3, @queue, SimpleLogger.new(:debug)) # no workers so that nothing processes the queue
+      @pool = ProcessPool.new(3, @queue, SimpleLogger.new(:debug))
       @pool.schedule(SampleTask)
       @pool.stubs(:fork => 1)
       @pool.start
@@ -226,6 +256,44 @@ class ProcessPoolTest < Test::Unit::TestCase
       @pool.start
       @pool.shutdown
       assert_equal 0, @pool.send(:queue).size
+    end
+
+  end
+
+  def self.should_write_lines(lines)
+    should "write lines to file" do
+      text = open(@path).read
+      file_lines = text.split('\n').collect { |line| line.strip }
+      assert_equal lines, file_lines
+    end
+  end
+
+  context "extensions" do
+    setup do
+      @queue = SampleQueue.new
+      @pool = ProcessPool.new(1, @queue, SimpleLogger.new(:debug))
+      @shared_file = Tempfile.new('test')
+      @path = @shared_file.path
+    end
+
+    teardown do
+      @shared_file.close
+    end
+
+    should "raise ArgumentError if called with nil" do
+      assert_raises ArgumentError do
+        @pool.register_extension nil
+      end
+    end
+
+    context "with no extensions" do
+      setup do
+        @pool.schedule(WriteToFileTask, @path, 1)
+        @pool.start
+        @pool.shutdown
+      end
+
+      should_write_lines "task 1"      
     end
 
   end
