@@ -1,0 +1,12 @@
+Extensions stuff:
+- around extensions
+- handling :stop
+- helpers for anonymous extensions
+- a couple of generic extensions:
+  - restarting active record connections on worker startup
+  - benchmarking
+  - restarting failed tasks
+
+Queue:
+  - posix shared memory or message queue backend
+  - redis backend

@@ -4,7 +4,7 @@
 # it's here mostly for convenience and documentation sake 
 class BaseWorkerExtension
 
-  attr_accessor :logger, :queue, :process_pool
+  attr_accessor :logger, :process_pool
 
   # will be called before task gets executed
   # thowing :stop will halt the task execution process,

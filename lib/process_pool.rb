@@ -13,6 +13,7 @@ class ProcessPool
     self.workers_count = workers_count
     self.queue = queue
     self.worker_pids = []
+    self.extensions = []
   end
 
   def schedule(job_class, *args)
@@ -24,6 +25,11 @@ class ProcessPool
   def register_extension(extension)
     raise InvalidStateError.new('Can not register extensions once the pool is started.') unless is_stopped?
     raise ArgumentError.new('extension can not be nil') unless extension
+
+    extension.process_pool = self if extension.respond_to?(:process_pool=)
+    extension.logger = logger if extension.respond_to?(:logger=)
+
+    extensions << extension
   end
 
   def start
@@ -33,12 +39,16 @@ class ProcessPool
 
     workers_count.times do
       pid = fork do
+        run_extensions(:startup)
+        at_exit { run_extensions(:shutdown) }
         child_queue = get_child_queue()
         while true
           task_class, args = child_queue.pop
           begin
             task = get_task_class(task_class).new(*args)
-            task.run
+            run_extensions(:before, task) unless task.is_a?(EndTask)
+            result = task.run
+            run_extensions(:after, task, result)
           rescue => e
             logger.warn("Exception occurred while executing task #{task_class}(#{args}): #{e}")
           end
@@ -78,7 +88,7 @@ class ProcessPool
 
   protected
 
-  attr_accessor :state, :logger, :queue, :worker_pids
+  attr_accessor :state, :logger, :queue, :worker_pids, :extensions
   attr_writer :workers_count
 
   def push_task(job_class, args)
@@ -96,6 +106,14 @@ class ProcessPool
     end
 
     Object.module_eval("::#{$1}", __FILE__, __LINE__)
+  end
+
+  def run_extensions(method, *args)
+    extensions.each do |extension|
+      if extension.respond_to?(method)
+        extension.send(method, *args)
+      end
+    end
   end
 
   class EndTask

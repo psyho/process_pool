@@ -261,16 +261,23 @@ class ProcessPoolTest < Test::Unit::TestCase
   end
 
   def self.should_write_lines(*lines)
-    should "write lines to file" do
+    should "write lines #{lines.collect{|line| line.inspect}.join(', ')} to file" do
       text = open(@path).read
-      file_lines = text.split('\n').collect { |line| line.strip }
+      file_lines = text.split("\n").collect { |line| line.strip }
       assert_equal lines, file_lines
+    end
+  end
+
+  def write_to_shared_file(str)
+    File.open(@path, 'a+') do |file|
+      file.puts str
     end
   end
 
   context "extensions" do
     setup do
-      @pool = ProcessPool.new(1, SimpleQueue.create, SimpleLogger.new(:debug))
+      @logger = SimpleLogger.new(:debug)
+      @pool = ProcessPool.new(1, SimpleQueue.create, @logger)
       @shared_file = Tempfile.new('test')
       @path = @shared_file.path
     end
@@ -285,16 +292,153 @@ class ProcessPoolTest < Test::Unit::TestCase
       end
     end
 
+    should "inject process_pool to the extension" do
+      extension = BaseWorkerExtension.new
+      assert_nil extension.process_pool
+      @pool.register_extension(extension)
+      assert_equal @pool, extension.process_pool
+    end
+
+    should "inject logger to the extension" do
+      extension = BaseWorkerExtension.new
+      assert_nil extension.logger
+      @pool.register_extension(extension)
+      assert_equal @logger, extension.logger
+    end
+
     context "with no extensions" do
       setup do
         @pool.schedule(WriteToFileTask, @path, 1)
+        @pool.schedule(WriteToFileTask, @path, 2)
+
         @pool.start
         @pool.shutdown
       end
 
-      should_write_lines "task 1"      
+      should_write_lines "task 1", "task 2"      
     end
 
+    context "with before extension" do
+      setup do
+        @pool.schedule(WriteToFileTask, @path, 1)
+        @pool.schedule(WriteToFileTask, @path, 2)
+
+        @pool.register_extension AnonymousExtension.new(:before) { |t| write_to_shared_file("before") }
+
+        @pool.start
+        @pool.shutdown
+      end
+
+      should_write_lines "before", "task 1", "before", "task 2"
+    end
+
+    context "with after extension" do
+      setup do
+        @pool.schedule(WriteToFileTask, @path, 1)
+        @pool.schedule(WriteToFileTask, @path, 2)
+
+        @pool.register_extension AnonymousExtension.new(:after) { |t, r| write_to_shared_file("after") }
+
+        @pool.start
+        @pool.shutdown
+      end
+
+      should_write_lines "task 1", "after", "task 2", "after"
+    end
+
+    context "with around extension" do
+      setup do
+        @pool.schedule(WriteToFileTask, @path, 1)
+        @pool.schedule(WriteToFileTask, @path, 2)
+
+        @pool.register_extension AnonymousExtension.new(:around) { |t|
+          write_to_shared_file("around 1")
+          t.run
+          write_to_shared_file("around 2")
+        }
+
+        @pool.start
+        @pool.shutdown
+      end
+
+      should_write_lines "around 1", "task 1", "around 2", "around 1", "task 2", "around 2"
+    end
+
+    context "with multiple around extensions" do
+      setup do
+        @pool.schedule(WriteToFileTask, @path, 1)
+        @pool.schedule(WriteToFileTask, @path, 2)
+
+        @pool.register_extension AnonymousExtension.new(:around) { |t|
+          write_to_shared_file("around a")
+          t.run
+          write_to_shared_file("around b")
+        }
+        
+        @pool.register_extension AnonymousExtension.new(:around) { |t|
+          write_to_shared_file("around 1")
+          t.run
+          write_to_shared_file("around 2")
+        }
+
+        @pool.start
+        @pool.shutdown
+      end
+
+      should_write_lines "around a", "around 1", "task 1", "around 2", "around b", "around a", "around 1", "task 2", "around 2", "around b"
+    end
+
+    context "with startup extension" do
+      setup do
+        @pool.schedule(WriteToFileTask, @path, 1)
+        @pool.schedule(WriteToFileTask, @path, 2)
+
+        @pool.register_extension AnonymousExtension.new(:startup) { write_to_shared_file("startup") }
+
+        @pool.start
+        @pool.shutdown
+      end
+
+      should_write_lines "startup", "task 1", "task 2"
+    end
+
+    context "with shutdown extension" do
+      setup do
+        @pool.schedule(WriteToFileTask, @path, 1)
+        @pool.schedule(WriteToFileTask, @path, 2)
+
+        @pool.register_extension AnonymousExtension.new(:shutdown) { write_to_shared_file("shutdown") }
+
+        @pool.start
+        @pool.shutdown
+      end
+
+      should_write_lines "task 1", "task 2", "shutdown"
+    end
+
+    context "with all kinds of extensions" do
+      setup do
+        @pool.schedule(WriteToFileTask, @path, 1)
+        @pool.schedule(WriteToFileTask, @path, 2)
+
+        @pool.register_extension AnonymousExtension.new(:around) { |t|
+          write_to_shared_file("around 1")
+          t.run
+          write_to_shared_file("around 2")
+        }
+
+        @pool.register_extension AnonymousExtension.new(:before) { |t| write_to_shared_file("before") }
+        @pool.register_extension AnonymousExtension.new(:after) { |t, r| write_to_shared_file("after") }
+
+        @pool.register_extension AnonymousExtension.new(:startup) { write_to_shared_file("startup") }
+        @pool.register_extension AnonymousExtension.new(:shutdown) { write_to_shared_file("shutdown") }
+
+        @pool.start
+        @pool.shutdown
+      end
+
+      should_write_lines "startup", "before", "around 1", "task 1", "around 2", "after", "before", "around 1", "task 2", "around 2", "after", "shutdown"
+    end
   end
 
 end
