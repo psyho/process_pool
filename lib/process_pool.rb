@@ -17,11 +17,13 @@ class ProcessPool
 
   def schedule(job_class, *args)
     raise InvalidStateError.new('Can not add more jobs after shut down was called') if is_shutdown?
-    logger.debug("Scheduling task #{job_class}(#{args})")
+    logger.debug("Scheduling task #{job_class}(#{args.collect{ |a| a.inspect }.join(', ')})")
     push_task(job_class, args)
   end
 
-  def register_extension(extension)    
+  def register_extension(extension)
+    raise InvalidStateError.new('Can not register extensions once the pool is started.') unless is_stopped?
+    raise ArgumentError.new('extension can not be nil') unless extension
   end
 
   def start

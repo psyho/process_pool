@@ -73,8 +73,8 @@ class WriteToFileTask
   end
 
   def run
-    File.open(@path) do |file|
-      file.puts "task #{n}"
+    File.open(@path, 'a+') do |file|
+      file.puts "task #{@n}"
     end
   end
 
@@ -260,7 +260,7 @@ class ProcessPoolTest < Test::Unit::TestCase
 
   end
 
-  def self.should_write_lines(lines)
+  def self.should_write_lines(*lines)
     should "write lines to file" do
       text = open(@path).read
       file_lines = text.split('\n').collect { |line| line.strip }
@@ -270,8 +270,7 @@ class ProcessPoolTest < Test::Unit::TestCase
 
   context "extensions" do
     setup do
-      @queue = SampleQueue.new
-      @pool = ProcessPool.new(1, @queue, SimpleLogger.new(:debug))
+      @pool = ProcessPool.new(1, SimpleQueue.create, SimpleLogger.new(:debug))
       @shared_file = Tempfile.new('test')
       @path = @shared_file.path
     end
